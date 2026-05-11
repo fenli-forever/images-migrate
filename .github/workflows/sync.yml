@@ -26,6 +26,9 @@ jobs:
           sudo chmod +x /usr/local/bin/yq
           yq --version
 
+      - name: verify docker buildx
+        run: docker buildx version
+
       - name: validate config
         run: bash scripts/sync.sh --dry-run
 

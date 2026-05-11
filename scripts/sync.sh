@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 #
-# 读取 images.yaml，把每个 source 镜像 pull → tag → push 到目标 Harbor。
+# 读取 images.yaml，把每个 source 镜像复制到目标 Harbor。
+# 用 docker buildx imagetools：
+#   - 自动保留多架构 manifest（不会因为 runner 是 amd64 就丢掉 arm64/arm/v7 等变体）
+#   - 跨 registry 直接复制 manifest 与 blob，不落盘镜像层
 # 单条失败不中断整体，结束时汇总；任一失败则脚本以 1 退出。
 
 set -uo pipefail
@@ -26,6 +29,7 @@ done
 
 command -v yq     >/dev/null || { echo "yq not found in PATH" >&2; exit 1; }
 command -v docker >/dev/null || { echo "docker not found in PATH" >&2; exit 1; }
+docker buildx version >/dev/null 2>&1 || { echo "docker buildx not available" >&2; exit 1; }
 [[ -f "$CONFIG_FILE" ]] || { echo "Config file not found: $CONFIG_FILE" >&2; exit 1; }
 
 REGISTRY=$(yq -r '.target.registry' "$CONFIG_FILE")
@@ -38,6 +42,14 @@ COUNT=$(yq -r '.images | length' "$CONFIG_FILE")
 
 declare -a SUCCESS=()
 declare -a FAILED=()
+
+# 列出源镜像支持的平台（一行一个，已去重）。失败时输出为空。
+inspect_platforms() {
+  local image="$1"
+  docker buildx imagetools inspect "$image" 2>/dev/null \
+    | awk '/^Platform:/ {print $2}' \
+    | sort -u
+}
 
 for ((i=0; i<COUNT; i++)); do
   SOURCE=$(yq -r ".images[$i].source" "$CONFIG_FILE")
@@ -52,7 +64,6 @@ for ((i=0; i<COUNT; i++)); do
   if [[ -n "$TARGET_OVERRIDE" ]]; then
     TARGET_PATH="$TARGET_OVERRIDE"
   else
-    # source 形如 docker.io/library/alpine:3.19 或 nginx:1.25，取最后一段
     TARGET_PATH="${SOURCE##*/}"
   fi
 
@@ -60,15 +71,26 @@ for ((i=0; i<COUNT; i++)); do
 
   echo "===== [$((i+1))/$COUNT] $SOURCE  ->  $FULL_TARGET ====="
 
+  PLATFORMS=$(inspect_platforms "$SOURCE" || true)
+  PLATFORM_COUNT=$(printf '%s\n' "$PLATFORMS" | grep -c . || true)
+
+  if [[ "$PLATFORM_COUNT" -eq 0 ]]; then
+    echo "  WARN: 探测平台失败（源镜像不存在或无访问权限），仍尝试复制"
+  elif [[ "$PLATFORM_COUNT" -eq 1 ]]; then
+    echo "  单架构: $PLATFORMS"
+  else
+    echo "  多架构: $PLATFORM_COUNT 个平台"
+    printf '%s\n' "$PLATFORMS" | sed 's/^/    - /'
+  fi
+
   if [[ "$DRY_RUN" -eq 1 ]]; then
-    SUCCESS+=("$SOURCE -> $FULL_TARGET (dry-run)")
+    SUCCESS+=("$SOURCE -> $FULL_TARGET (dry-run, ${PLATFORM_COUNT}p)")
     continue
   fi
 
-  if docker pull "$SOURCE" \
-     && docker tag  "$SOURCE" "$FULL_TARGET" \
-     && docker push "$FULL_TARGET"; then
-    SUCCESS+=("$SOURCE -> $FULL_TARGET")
+  # 单条命令同时处理单架构 / 多架构，原样保留 manifest 类型
+  if docker buildx imagetools create --tag "$FULL_TARGET" "$SOURCE"; then
+    SUCCESS+=("$SOURCE -> $FULL_TARGET (${PLATFORM_COUNT}p)")
   else
     FAILED+=("$SOURCE -> $FULL_TARGET")
   fi

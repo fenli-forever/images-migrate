@@ -9,11 +9,12 @@ push to master
       |
       v
 GitHub Actions  -->  docker login harbor  -->  for each image in images.yaml:
-                                                  docker pull  <source>
-                                                  docker tag   <source> <harbor>/<ns>/<target>
-                                                  docker push  <harbor>/<ns>/<target>
+                                                  docker buildx imagetools inspect <source>   # 检测平台数
+                                                  docker buildx imagetools create  <source> --tag <harbor>/<ns>/<target>
                                               汇总成功/失败
 ```
+
+**多架构自动保留**：用 `docker buildx imagetools` 跨 registry 直接复制 manifest，不在 runner 上落盘镜像层。如果源是多架构（如官方 nginx 同时含 amd64/arm64/arm/v7），目标也会保留完整的 manifest list；如果源是单架构，原样复制。无需任何配置。
 
 ## 一次性准备
 
