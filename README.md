@@ -14,7 +14,11 @@ GitHub Actions  -->  docker login harbor  -->  for each image in images.yaml:
                                               汇总成功/失败
 ```
 
-**多架构自动保留**：用 `docker buildx imagetools` 跨 registry 直接复制 manifest，不在 runner 上落盘镜像层。如果源是多架构（如官方 nginx 同时含 amd64/arm64/arm/v7），目标也会保留完整的 manifest list；如果源是单架构，原样复制。无需任何配置。
+**多架构按白名单过滤**：用 `docker buildx imagetools` 跨 registry 直接复制 manifest，不在 runner 上落盘镜像层。流程：
+
+- **多架构源**：按 `target.platforms` 白名单筛选目标平台对应的 digest，重组成新的 manifest list 推到 Harbor。当前默认只保留 `linux/amd64` 和 `linux/arm64/v8`。
+- **单架构源**：原样复制（白名单不适用）。
+- **未配置 `target.platforms`**：源的所有平台全部保留。
 
 ## 一次性准备
 
@@ -35,6 +39,9 @@ GitHub Actions  -->  docker login harbor  -->  for each image in images.yaml:
    target:
      registry: harbor.example.com   # 你的 Harbor 域名
      namespace: library             # Harbor 项目名
+     platforms:                     # 多架构源仅保留这些平台；不写则保留全部
+       - linux/amd64
+       - linux/arm64/v8
 
    images:
      - source: nginx:1.25                  # 自动 -> harbor.example.com/library/nginx:1.25
@@ -74,7 +81,7 @@ bash scripts/sync.sh --dry-run
 bash scripts/sync.sh
 ```
 
-依赖：`docker`、[`yq`](https://github.com/mikefarah/yq)。
+依赖：`docker`（含 buildx）、[`yq`](https://github.com/mikefarah/yq)、`jq`。GitHub-hosted ubuntu-latest runner 全部预装。
 
 ## 手动触发
 

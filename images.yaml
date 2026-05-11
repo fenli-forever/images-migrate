@@ -2,6 +2,8 @@
 #
 # target.registry  : Harbor 域名（不带 https://、不带尾斜杠）
 # target.namespace : Harbor 项目名
+# target.platforms : 多架构源镜像的平台白名单。仅这些平台会进目标 manifest list。
+#                    不配置则保留源镜像的全部平台。单架构源不受此过滤影响。
 # images[].source  : 源镜像（Docker Hub 等公网地址）
 # images[].target  : 可选，覆盖目标路径段；缺省取 source 最后一段
 #
@@ -10,6 +12,9 @@
 target:
   registry: harbor.example.com
   namespace: library
+  platforms:
+    - linux/amd64
+    - linux/arm64/v8
 
 images:
   - source: nginx:1.25

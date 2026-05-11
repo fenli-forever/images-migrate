@@ -10,9 +10,18 @@ Docker 镜像同步代理。维护一份镜像清单 + 目标 Harbor 仓库地�
 
 三件套，缺一不可：
 
-- **`images.yaml`** — 唯一可变配置。`target.registry`（Harbor 域名）、`target.namespace`（Harbor 项目名）、`images[]`（源镜像列表，可选 `target` 字段覆盖目标命名）。**禁止写入用户名/密码**。
-- **`scripts/sync.sh`** — 同步执行核心。用 `yq` 解析 yaml，循环 `docker buildx imagetools create` 跨 registry 复制。**自动保留多架构 manifest**（不会因为 runner 是 amd64 就丢掉 arm64/arm/v7 等变体）；同一条命令处理单架构与多架构，无需分支判断。另用 `imagetools inspect` 把每个镜像的平台数打到日志。单镜像失败不中断整体，全部跑完后汇总；任一失败则脚本以非 0 退出。
+- **`images.yaml`** — 唯一可变配置。`target.registry`（Harbor 域名）、`target.namespace`（Harbor 项目名）、`target.platforms`（多架构源的平台白名单，不配则保留全部）、`images[]`（源镜像列表，可选 `target` 字段覆盖目标命名）。**禁止写入用户名/密码**。
+- **`scripts/sync.sh`** — 同步执行核心。流程：`yq` 解析 yaml → `imagetools inspect --raw` 抓取源 manifest → 判断单 / 多架构 → 多架构时按 `target.platforms` 用 `jq` 筛 digest → `imagetools create --tag <target> <src>@<digest>...` 重组并推送。跨 registry 直接复制 manifest 与 blob，不落盘。单镜像失败不中断整体，全部跑完后汇总；任一失败则脚本以非 0 退出。
 - **`.github/workflows/sync.yml`** — 调度入口。`push` 到 master 且 `images.yaml` / `scripts/sync.sh` / workflow 自身变更时触发，附加 `workflow_dispatch` 手动重跑入口。`docker login` 凭据来自 Secrets。
+
+## 多架构平台过滤
+
+`target.platforms` 是白名单。**只对多架构源生效**——单架构源原样推（即便其平台不在白名单里）。
+
+平台匹配规则（`find_digest_for_platform` 函数实现）：
+- `linux/amd64` 精确匹配 os=linux, arch=amd64, variant 缺省或空
+- `linux/arm64/v8` 匹配 os=linux, arch=arm64, **variant=v8 或缺省**（兼容很多官方镜像把 arm64 写成无 variant 的情况）
+- 其他 `os/arch/variant` 走精确匹配
 
 ## 凭据
 
