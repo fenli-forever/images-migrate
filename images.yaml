@@ -10,8 +10,8 @@
 # 最终目标地址 = <registry>/<namespace>/<target 或 source 末段>
 
 target:
-  registry: harbor.example.com
-  namespace: library
+  registry: hub-pub.jdcloud.com
+  namespace: mesh
   platforms:
     - linux/amd64
     - linux/arm64/v8
