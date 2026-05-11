@@ -1,0 +1,46 @@
+name: sync images to harbor
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'images.yaml'
+      - 'scripts/sync.sh'
+      - '.github/workflows/sync.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq \
+            https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+          yq --version
+
+      - name: validate config
+        run: bash scripts/sync.sh --dry-run
+
+      - name: login to harbor
+        run: |
+          REGISTRY=$(yq -r '.target.registry' images.yaml)
+          echo "::add-mask::${{ secrets.HARBOR_PASSWORD }}"
+          echo "${{ secrets.HARBOR_PASSWORD }}" | docker login "$REGISTRY" \
+            -u "${{ secrets.HARBOR_USERNAME }}" --password-stdin
+
+      - name: sync images
+        run: bash scripts/sync.sh
+
+      - name: logout
+        if: always()
+        run: |
+          REGISTRY=$(yq -r '.target.registry' images.yaml)
+          docker logout "$REGISTRY" || true

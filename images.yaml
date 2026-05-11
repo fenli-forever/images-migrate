@@ -1,0 +1,18 @@
+# Docker 镜像同步配置
+#
+# target.registry  : Harbor 域名（不带 https://、不带尾斜杠）
+# target.namespace : Harbor 项目名
+# images[].source  : 源镜像（Docker Hub 等公网地址）
+# images[].target  : 可选，覆盖目标路径段；缺省取 source 最后一段
+#
+# 最终目标地址 = <registry>/<namespace>/<target 或 source 末段>
+
+target:
+  registry: harbor.example.com
+  namespace: library
+
+images:
+  - source: nginx:1.25
+  - source: redis:7-alpine
+  - source: alpine:3.19
+    target: base/alpine:3.19
