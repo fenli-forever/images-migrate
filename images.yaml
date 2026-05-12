@@ -17,7 +17,10 @@ target:
     - linux/arm64/v8
 
 images:
-  - source: nginx:1.25
-  - source: redis:7-alpine
-  - source: alpine:3.19
-    target: base/alpine:3.19
+  - source: quay.io/jetstack/cert-manager-controller:v1.12.10
+    target: jetstack/cert-manager-controller:v1.12.10
+  - source: quay.io/jetstack/cert-manager-cainjector:v1.12.10
+    target: jetstack/cert-manager-cainjector:v1.12.10
+  - source: quay.io/jetstack/cert-manager-webhook:v1.12.10
+    target: jetstack/cert-manager-webhook:v1.12.10
+    
