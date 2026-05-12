@@ -17,10 +17,6 @@ target:
     - linux/arm64/v8
 
 images:
-  - source: gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1
+  - source: kubebuilder/kube-rbac-proxy:v0.13.1
     target: kubebuilder/kube-rbac-proxy:v0.13.1
-  - source: kserve/kserve-controller:v0.12.0
-    target: kserve/kserve-controller:v0.12.0
-  - source: kserve/modelmesh-controller:v0.11.2
-    target: kserve/modelmesh-controller:v0.11.2
     
