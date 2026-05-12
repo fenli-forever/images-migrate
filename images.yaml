@@ -17,10 +17,10 @@ target:
     - linux/arm64/v8
 
 images:
-  - source: quay.io/jetstack/cert-manager-controller:v1.12.10
-    target: jetstack/cert-manager-controller:v1.12.10
-  - source: quay.io/jetstack/cert-manager-cainjector:v1.12.10
-    target: jetstack/cert-manager-cainjector:v1.12.10
-  - source: quay.io/jetstack/cert-manager-webhook:v1.12.10
-    target: jetstack/cert-manager-webhook:v1.12.10
+  - source: gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1
+    target: kubebuilder/kube-rbac-proxy:v0.13.1
+  - source: kserve/kserve-controller:v0.12.0
+    target: kserve/kserve-controller:v0.12.0
+  - source: kserve/modelmesh-controller:v0.11.2
+    target: kserve/modelmesh-controller:v0.11.2
     
