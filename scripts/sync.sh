@@ -98,15 +98,35 @@ for ((i=0; i<COUNT; i++)); do
   echo "===== [$((i+1))/$COUNT] $SOURCE  ->  $FULL_TARGET ====="
 
   RAW=$(docker buildx imagetools inspect --raw "$SOURCE" 2>/dev/null || true)
+
+  declare -a SOURCES_FOR_CREATE=()
+
   if [[ -z "$RAW" ]]; then
-    echo "  FAIL: 探测源镜像失败（不存在或无访问权限）"
-    FAILED+=("$SOURCE -> $FULL_TARGET (inspect failed)")
+    # imagetools inspect 失败，回退到 pull → tag → push
+    echo "  imagetools inspect 无结果，尝试 pull → tag → push"
+
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+      SUCCESS+=("$SOURCE -> $FULL_TARGET (dry-run, pull-tag-push)")
+      continue
+    fi
+
+    if ! docker pull "$SOURCE"; then
+      echo "  FAIL: 镜像不存在或无访问权限"
+      FAILED+=("$SOURCE -> $FULL_TARGET (pull failed)")
+      continue
+    fi
+
+    docker tag "$SOURCE" "$FULL_TARGET"
+    if docker push "$FULL_TARGET"; then
+      SUCCESS+=("$SOURCE -> $FULL_TARGET (pull-tag-push)")
+    else
+      FAILED+=("$SOURCE -> $FULL_TARGET (push failed)")
+    fi
+    docker rmi "$SOURCE" "$FULL_TARGET" 2>/dev/null || true
     continue
   fi
 
   IS_MANIFEST_LIST=$(printf '%s' "$RAW" | jq -r 'if has("manifests") then "yes" else "no" end')
-
-  declare -a SOURCES_FOR_CREATE=()
 
   if [[ "$IS_MANIFEST_LIST" == "no" ]]; then
     echo "  单架构源，原样复制（平台过滤不适用）"
