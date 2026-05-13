@@ -4,8 +4,10 @@
 # target.namespace : Harbor 项目名
 # target.platforms : 多架构源镜像的平台白名单。仅这些平台会进目标 manifest list。
 #                    不配置则保留源镜像的全部平台。单架构源不受此过滤影响。
-# images[].source  : 源镜像（Docker Hub 等公网地址）
-# images[].target  : 可选，覆盖目标路径段；缺省取 source 最后一段
+# images[].source    : 源镜像（Docker Hub 等公网地址）
+# images[].target    : 可选，覆盖目标路径段；缺省取 source 最后一段
+# images[].multiarch : 可选，true 表示多架构镜像（走 imagetools inspect + create），
+#                      false/省略 表示单架构（走 pull → tag → push）
 #
 # 最终目标地址 = <registry>/<namespace>/<target 或 source 末段>
 
@@ -19,8 +21,3 @@ target:
 images:
   - source: cr.kgateway.dev/kgateway-dev/envoy-wrapper:v2.0.4
     target: kgateway-dev/envoy-wrapper:v2.0.4
-  
-    
-    
-    
-    

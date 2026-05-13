@@ -1,11 +1,9 @@
 #!/usr/bin/env bash
 #
 # 读取 images.yaml，把每个 source 镜像复制到目标 Harbor。
-# 用 docker buildx imagetools：
-#   - 多架构源：按 target.platforms 过滤（用 source@digest 形式重组 manifest list）
-#   - 单架构源：原样复制
-#   - 未配置 target.platforms：原样保留源的所有平台
-# 跨 registry 直接复制 manifest 与 blob，不在 runner 上落盘镜像层。
+# 根据 images[].multiarch 字段分流：
+#   - multiarch: true  → docker buildx imagetools inspect + create，按 target.platforms 过滤
+#   - multiarch: false → docker pull → tag → push
 # 单条失败不中断整体，结束时汇总；任一失败则脚本以 1 退出。
 
 set -uo pipefail
@@ -80,6 +78,7 @@ find_digest_for_platform() {
 for ((i=0; i<COUNT; i++)); do
   SOURCE=$(yq -r ".images[$i].source" "$CONFIG_FILE")
   TARGET_OVERRIDE=$(yq -r ".images[$i].target // \"\"" "$CONFIG_FILE")
+  MULTIARCH=$(yq -r ".images[$i].multiarch // false" "$CONFIG_FILE")
 
   if [[ -z "$SOURCE" || "$SOURCE" == "null" ]]; then
     echo "images[$i].source missing, skipped" >&2
@@ -97,13 +96,9 @@ for ((i=0; i<COUNT; i++)); do
 
   echo "===== [$((i+1))/$COUNT] $SOURCE  ->  $FULL_TARGET ====="
 
-  RAW=$(docker buildx imagetools inspect --raw "$SOURCE" 2>/dev/null || true)
-
-  declare -a SOURCES_FOR_CREATE=()
-
-  if [[ -z "$RAW" ]]; then
-    # imagetools inspect 失败，回退到 pull → tag → push
-    echo "  imagetools inspect 无结果，尝试 pull → tag → push"
+  # 非多架构：直接 pull → tag → push
+  if [[ "$MULTIARCH" != "true" ]]; then
+    echo "  单架构，pull → tag → push"
 
     if [[ "$DRY_RUN" -eq 1 ]]; then
       SUCCESS+=("$SOURCE -> $FULL_TARGET (dry-run, pull-tag-push)")
@@ -126,6 +121,16 @@ for ((i=0; i<COUNT; i++)); do
     continue
   fi
 
+  # 多架构：imagetools inspect → 按平台过滤 → imagetools create
+  RAW=$(docker buildx imagetools inspect --raw "$SOURCE" 2>/dev/null || true)
+
+  if [[ -z "$RAW" ]]; then
+    echo "  FAIL: 多架构镜像 inspect 失败"
+    FAILED+=("$SOURCE -> $FULL_TARGET (inspect failed)")
+    continue
+  fi
+
+  declare -a SOURCES_FOR_CREATE=()
   IS_MANIFEST_LIST=$(printf '%s' "$RAW" | jq -r 'if has("manifests") then "yes" else "no" end')
 
   if [[ "$IS_MANIFEST_LIST" == "no" ]]; then
