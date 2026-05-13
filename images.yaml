@@ -17,20 +17,10 @@ target:
     - linux/arm64/v8
 
 images:
-  - source: kserve/rest-proxy:v0.11.2
-    target: kserve/rest-proxy:v0.11.2
-  - source: seldonio/mlserver:1.3.2
-    target: seldonio/mlserver:1.3.2
-  - source: kserve/modelmesh-runtime-adapter:v0.11.2
-    target: kserve/modelmesh-runtime-adapter:v0.11.2
-  - source: kserve/modelmesh:v0.11.2
-    target: kserve/modelmesh:v0.11.2
-  - source: openvino/model_server:2022.2
-    target: openvino/model_server:2022.2
-  - source: pytorch/torchserve:0.7.1-cpu
-    target: pytorch/torchserve:0.7.1-cpu
-  - source: nvcr.io/nvidia/tritonserver:23.04-py3
-    target: nvidia/tritonserver:23.04-py3
+  - source: cr.kgateway.dev/kgateway-dev/kgateway:v2.0.4
+    target: kgateway-dev/kgateway:v2.0.4
+  - source: registry.k8s.io/ingress-nginx/controller:v1.12.1
+    target: ingress-nginx/controller:v1.12.1
   
     
     
