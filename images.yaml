@@ -17,10 +17,8 @@ target:
     - linux/arm64/v8
 
 images:
-  - source: cr.kgateway.dev/kgateway-dev/kgateway:v2.0.4
-    target: kgateway-dev/kgateway:v2.0.4
-  - source: registry.k8s.io/ingress-nginx/controller:v1.12.1
-    target: ingress-nginx/controller:v1.12.1
+  - source: cr.kgateway.dev/kgateway-dev/envoy-wrapper:v2.0.4
+    target: kgateway-dev/envoy-wrapper:v2.0.4
   
     
     
