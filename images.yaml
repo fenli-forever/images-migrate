@@ -19,6 +19,15 @@ target:
     - linux/arm64/v8
 
 images:
-  - source: kserve/agent:v0.12.0
-    target: kserve/agent:v0.12.0
+  - source: kserve/storage-initializer:v0.12.0
+    target: kserve/storage-initializer:v0.12.0
+    multiarch: true
+  - source: kserve/alibi-explainer:v0.12.0
+    target: kserve/alibi-explainer:v0.12.0
+    multiarch: true
+  - source: kserve/art-explainer:v0.12.0
+    target: kserve/art-explainer:v0.12.0
+    multiarch: true
+  - source: kserve/router:v0.12.0
+    target: kserve/router:v0.12.0
     multiarch: true
