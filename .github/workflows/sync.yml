@@ -19,6 +19,26 @@ jobs:
       - name: checkout
         uses: actions/checkout@v4
 
+      # 👇 核心调整：在安装和同步前，物理腾出约 35GB-40GB 的磁盘空间
+      - name: 🔄 Free Disk Space
+        run: |
+          echo "=== 清理前的磁盘空间 ==="
+          df -h
+          
+          echo "=== 开始删除 GitHub Runner 自带的大型无用软件 ==="
+          # 这些是官方环境中占用空间最大且我们当前不需要的组件
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          
+          echo "=== 清理 Docker 历史残留缓存 ==="
+          docker system prune -a -f --volumes || true
+          
+          echo "=== 清理后的磁盘空间 ==="
+          df -h
+
       - name: install yq
         run: |
           sudo wget -qO /usr/local/bin/yq \
