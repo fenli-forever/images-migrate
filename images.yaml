@@ -19,6 +19,6 @@ target:
     - linux/arm64/v8
 
 images:
-  - source: nvcr.io/nvidia/tritonserver:24.06-vllm-python-py3
-    target: nvidia/tritonserver:24.06-vllm-python-py3
-    multiarch: false
+  - source: gcr.io/knative-releases/knative.dev/serving/cmd/queue:v1.10.6
+    target: serving/cmd/queue:v1.10.6
+    multiarch: true
