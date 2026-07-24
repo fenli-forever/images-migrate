@@ -13,12 +13,12 @@
 
 target:
   registry: hub-pub.jdcloud.com
-  namespace: joybuilder
+  namespace: jmsf
   platforms:
     - linux/amd64
     - linux/arm64/v8
 
 images:
-  - source: gcr.io/knative-releases/knative.dev/serving/cmd/queue:v1.10.6
-    target: serving/cmd/queue:v1.10.6
+  - source: mysql:8.0
+    target: mysql:8.0
     multiarch: true
