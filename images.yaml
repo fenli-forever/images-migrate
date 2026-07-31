@@ -19,6 +19,6 @@ target:
     - linux/arm64/v8
 
 images:
-  - source: mysql:8.0
-    target: mysql:8.0
+  - source: ghcr.io/berriai/litellm:main-stable
+    target: litellm:main-stable
     multiarch: true
