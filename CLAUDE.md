@@ -10,8 +10,8 @@ Docker 镜像同步代理。维护一份镜像清单 + 目标 Harbor 仓库地�
 
 三件套，缺一不可：
 
-- **`images.yaml`** — 唯一可变配置。`target.registry`（Harbor 域名）、`target.namespace`（Harbor 项目名）、`target.platforms`（多架构源的平台白名单，不配则保留全部）、`images[]`（源镜像列表，可选 `target` 字段覆盖目标命名，可选 `multiarch: true` 走 imagetools 多架构流程，默认 false 走 pull-tag-push）。**禁止写入用户名/密码**。
-- **`scripts/sync.sh`** — 同步执行核心。流程：`yq` 解析 yaml → `imagetools inspect --raw` 抓取源 manifest → 判断单 / 多架构 → 多架构时按 `target.platforms` 用 `jq` 筛 digest → `imagetools create --tag <target> <src>@<digest>...` 重组并推送。跨 registry 直接复制 manifest 与 blob，不落盘。单镜像失败不中断整体，全部跑完后汇总；任一失败则脚本以非 0 退出。
+- **`images.yaml`** — 唯一可变配置。`target.registry`（Harbor 域名）、`target.namespace`（Harbor 项目名）、`target.platforms`（多架构源的平台白名单，不配则保留全部）、`images[]`（源镜像列表，可选 `target` 字段覆盖目标命名，可选 `multiarch: true` 走 imagetools 多架构流程，默认 false 走 Skopeo 流式复制）。**禁止写入用户名/密码**。
+- **`scripts/sync.sh`** — 同步执行核心。默认单架构镜像使用 `skopeo copy` 在 registry 间流式复制；`multiarch: true` 时由 `imagetools inspect --raw` 抓取 manifest，按 `target.platforms` 用 `jq` 筛 digest，再以 `imagetools create` 重组并推送。两条路径都不执行 `docker pull`，避免大镜像解压占满 Runner 磁盘。单镜像失败不中断整体，全部跑完后汇总；任一失败则脚本以非 0 退出。
 - **`.github/workflows/sync.yml`** — 调度入口。`push` 到 master 且 `images.yaml` / `scripts/sync.sh` / workflow 自身变更时触发，附加 `workflow_dispatch` 手动重跑入口。`docker login` 凭据来自 Secrets。
 
 ## 多架构平台过滤

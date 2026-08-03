@@ -19,32 +19,59 @@ jobs:
       - name: checkout
         uses: actions/checkout@v4
 
-      # 👇 核心调整：在安装和同步前，物理腾出约 35GB-40GB 的磁盘空间
-      - name: 🔄 Free Disk Space
+      - name: free disk space
+        shell: bash
         run: |
-          echo "=== 清理前的磁盘空间 ==="
-          df -h
-          
-          echo "=== 开始删除 GitHub Runner 自带的大型无用软件 ==="
-          # 这些是官方环境中占用空间最大且我们当前不需要的组件
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /usr/local/share/boost
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-          
-          echo "=== 清理 Docker 历史残留缓存 ==="
-          docker system prune -a -f --volumes || true
-          
-          echo "=== 清理后的磁盘空间 ==="
-          df -h
+          set -euxo pipefail
 
-      - name: install yq
+          echo "=== 清理前的磁盘空间 ==="
+          df -h /
+          docker system df || true
+
+          echo "=== 开始删除 GitHub Runner 自带的大型无用软件 ==="
+          unused_paths=(
+            /usr/share/dotnet
+            /usr/local/lib/android
+            /opt/ghc
+            /usr/local/.ghcup
+            /usr/local/share/boost
+            /usr/share/swift
+            /usr/local/share/powershell
+            /opt/az
+          )
+          if [[ -n "${AGENT_TOOLSDIRECTORY:-}" && "$AGENT_TOOLSDIRECTORY" == /opt/* ]]; then
+            unused_paths+=("$AGENT_TOOLSDIRECTORY")
+          fi
+          sudo rm -rf -- "${unused_paths[@]}"
+
+          echo "=== 清理 Docker 镜像、容器、卷和 BuildKit 缓存 ==="
+          docker builder prune --all --force || true
+          docker system prune -a -f --volumes || true
+          sudo apt-get clean
+          sudo rm -rf -- /var/cache/apt/archives/*
+
+          echo "=== 清理后的磁盘空间 ==="
+          df -h /
+          docker system df || true
+
+      - name: install sync tools
+        shell: bash
         run: |
+          set -euxo pipefail
+
           sudo wget -qO /usr/local/bin/yq \
             https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
           sudo chmod +x /usr/local/bin/yq
+
+          if ! command -v skopeo >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends skopeo
+          fi
+          sudo apt-get clean
+          sudo rm -rf -- /var/lib/apt/lists/* /var/cache/apt/archives/*
+
           yq --version
+          skopeo --version
 
       - name: verify docker buildx
         run: docker buildx version

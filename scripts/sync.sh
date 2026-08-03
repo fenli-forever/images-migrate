@@ -3,7 +3,7 @@
 # 读取 images.yaml，把每个 source 镜像复制到目标 Harbor。
 # 根据 images[].multiarch 字段分流：
 #   - multiarch: true  → docker buildx imagetools inspect + create，按 target.platforms 过滤
-#   - multiarch: false → docker pull → tag → push
+#   - multiarch: false → skopeo 在 registry 间流式复制，不把镜像层解压到本地
 # 单条失败不中断整体，结束时汇总；任一失败则脚本以 1 退出。
 
 set -uo pipefail
@@ -52,6 +52,43 @@ fi
 declare -a SUCCESS=()
 declare -a FAILED=()
 
+# containers/image 在非交互环境中可能拒绝解析 Docker Hub 短名称，显式补全域名。
+normalize_source_for_skopeo() {
+  local source="$1"
+  local first_component="${source%%/*}"
+
+  if [[ "$source" != */* ]]; then
+    printf 'docker.io/library/%s' "$source"
+  elif [[ "$first_component" != *.* && "$first_component" != *:* && "$first_component" != "localhost" ]]; then
+    printf 'docker.io/%s' "$source"
+  else
+    printf '%s' "$source"
+  fi
+}
+
+copy_without_local_storage() {
+  local source="$1"
+  local target="$2"
+  local normalized_source auth_file
+  # Harbor 不一定支持源 registry 的简单签名；镜像内容与 digest 校验不受影响。
+  local -a skopeo_args=(--retry-times 3 --remove-signatures)
+
+  normalized_source=$(normalize_source_for_skopeo "$source")
+  auth_file="${DOCKER_CONFIG:-$HOME/.docker}/config.json"
+  if [[ -f "$auth_file" ]]; then
+    skopeo_args+=(--authfile "$auth_file")
+  fi
+
+  skopeo copy "${skopeo_args[@]}" \
+    "docker://${normalized_source}" \
+    "docker://${target}"
+}
+
+report_disk_usage() {
+  echo "  根分区剩余空间:"
+  df -h / | sed 's/^/    /'
+}
+
 # 在 manifest list JSON 中找匹配平台的 digest。
 # 兼容 arm64/v8 在源镜像里 variant 缺省的情况（很多官方镜像就这么写）。
 find_digest_for_platform() {
@@ -96,28 +133,28 @@ for ((i=0; i<COUNT; i++)); do
 
   echo "===== [$((i+1))/$COUNT] $SOURCE  ->  $FULL_TARGET ====="
 
-  # 非多架构：直接 pull → tag → push
+  # 非多架构：通过 registry API 流式复制压缩层，不写入 Docker overlay2。
   if [[ "$MULTIARCH" != "true" ]]; then
-    echo "  单架构，pull → tag → push"
+    echo "  单架构，registry → registry 流式复制（不落 Docker 本地存储）"
 
     if [[ "$DRY_RUN" -eq 1 ]]; then
-      SUCCESS+=("$SOURCE -> $FULL_TARGET (dry-run, pull-tag-push)")
+      SUCCESS+=("$SOURCE -> $FULL_TARGET (dry-run, skopeo-copy)")
       continue
     fi
 
-    if ! docker pull "$SOURCE"; then
-      echo "  FAIL: 镜像不存在或无访问权限"
-      FAILED+=("$SOURCE -> $FULL_TARGET (pull failed)")
+    if ! command -v skopeo >/dev/null; then
+      echo "  FAIL: skopeo not found in PATH（单架构流式复制依赖）"
+      FAILED+=("$SOURCE -> $FULL_TARGET (skopeo missing)")
       continue
     fi
 
-    docker tag "$SOURCE" "$FULL_TARGET"
-    if docker push "$FULL_TARGET"; then
-      SUCCESS+=("$SOURCE -> $FULL_TARGET (pull-tag-push)")
+    if copy_without_local_storage "$SOURCE" "$FULL_TARGET"; then
+      SUCCESS+=("$SOURCE -> $FULL_TARGET (skopeo-copy)")
     else
-      FAILED+=("$SOURCE -> $FULL_TARGET (push failed)")
+      echo "  FAIL: registry 间复制失败（镜像不存在、无权限或网络异常）"
+      FAILED+=("$SOURCE -> $FULL_TARGET (skopeo copy failed)")
     fi
-    docker rmi "$SOURCE" "$FULL_TARGET" 2>/dev/null || true
+    report_disk_usage
     continue
   fi
 
@@ -169,6 +206,7 @@ for ((i=0; i<COUNT; i++)); do
   else
     FAILED+=("$SOURCE -> $FULL_TARGET")
   fi
+  report_disk_usage
 done
 
 echo

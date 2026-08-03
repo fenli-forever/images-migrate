@@ -9,15 +9,15 @@ push to master
       |
       v
 GitHub Actions  -->  docker login harbor  -->  for each image in images.yaml:
-                                                  docker buildx imagetools inspect <source>   # 检测平台数
-                                                  docker buildx imagetools create  <source> --tag <harbor>/<ns>/<target>
+                                                  multiarch: false -> skopeo copy（流式复制）
+                                                  multiarch: true  -> buildx imagetools（筛选平台）
                                               汇总成功/失败
 ```
 
-**多架构按白名单过滤**：用 `docker buildx imagetools` 跨 registry 直接复制 manifest，不在 runner 上落盘镜像层。流程：
+两条路径都不会执行 `docker pull`，因此镜像层不会解压到 GitHub Runner 的 Docker `overlay2`，可同步体积远大于 Runner 剩余磁盘的单架构镜像。
 
-- **多架构源**：按 `target.platforms` 白名单筛选目标平台对应的 digest，重组成新的 manifest list 推到 Harbor。当前默认只保留 `linux/amd64` 和 `linux/arm64/v8`。
-- **单架构源**：原样复制（白名单不适用）。
+- **单架构源（默认）**：用 `skopeo copy` 在两个 registry 之间流式复制压缩层，不保留本地镜像；平台白名单不适用。
+- **多架构源**：用 `docker buildx imagetools` 跨 registry 复制，并按 `target.platforms` 白名单筛选 digest、重组 manifest list。当前默认只保留 `linux/amd64` 和 `linux/arm64/v8`。
 - **未配置 `target.platforms`**：源的所有平台全部保留。
 
 ## 一次性准备
@@ -81,7 +81,7 @@ bash scripts/sync.sh --dry-run
 bash scripts/sync.sh
 ```
 
-依赖：`docker`（含 buildx）、[`yq`](https://github.com/mikefarah/yq)、`jq`。GitHub-hosted ubuntu-latest runner 全部预装。
+依赖：`docker`（含 buildx）、[`skopeo`](https://github.com/containers/skopeo)、[`yq`](https://github.com/mikefarah/yq)、`jq`。工作流会自动安装 `skopeo` 和 `yq`。
 
 ## 手动触发
 
