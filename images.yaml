@@ -13,12 +13,12 @@
 
 target:
   registry: hub-pub.jdcloud.com
-  namespace: jmsf
+  namespace: jdaip-system
   platforms:
     - linux/amd64
     - linux/arm64/v8
 
 images:
-  - source: lmsysorg/sglang:v0.5.16-rocm720-mi35x
-    target: jdaip-system/trainning/sglang0.5.16-rocm720-mi35x-openeuler22-amd64:v1
+  - source: lmsysorg/sglang@sha256:29f0f645122be1799a594c15907d81da326dbbe6ccd6395710a07a4292125a5f
+    target: trainning/sglang-latest-cu129-openeuler22-amd64:v1
     multiarch: false
