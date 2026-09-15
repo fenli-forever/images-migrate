@@ -19,6 +19,6 @@ target:
     - linux/arm64/v8
 
 images:
-  - source: lmsysorg/sglang@sha256:29f0f645122be1799a594c15907d81da326dbbe6ccd6395710a07a4292125a5f
-    target: trainning/sglang-latest-cu129-openeuler22-amd64:v1
+  - source: nvcr.io/nvidia/mlperf/mlperf-inference:mlpinf-v5.1-cuda12.9-pytorch25.05-ubuntu24.04-x86_64
+    target: nvidia/mlperf/mlperf-inference:mlpinf-v5.1-cuda12.9-pytorch25.05-ubuntu24.04-x86_64
     multiarch: false
