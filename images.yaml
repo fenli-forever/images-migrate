@@ -16,9 +16,9 @@ target:
   namespace: jdaip-system
   platforms:
     - linux/amd64
-    - linux/arm64/v8
+    - linux/arm64
 
 images:
-  - source: nvcr.io/nvidia/mlperf/mlperf-inference:mlpinf-v5.1-cuda12.9-pytorch25.05-ubuntu24.04-x86_64
-    target: nvidia/mlperf/mlperf-inference:mlpinf-v5.1-cuda12.9-pytorch25.05-ubuntu24.04-x86_64
-    multiarch: false
+  - source: nvcr.io/nvidia/tritonserver:24.03-py3
+    target: nvidia/tritonserver:24.03-py3
+    multiarch: true
