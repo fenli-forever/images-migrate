@@ -16,7 +16,6 @@ target:
   namespace: jdaip-system
   platforms:
     - linux/amd64
-    - linux/arm64
 
 images:
   - source: nvcr.io/nvidia/tritonserver:25.06-vllm-python-py3
