@@ -18,6 +18,6 @@ target:
     - linux/amd64
 
 images:
-  - source: nvcr.io/nvidia/tritonserver:25.06-vllm-python-py3
-    target: nvidia/tritonserver:25.06-vllm-python-py3
+  - source: nvcr.io/nvidia/pytorch:24.07-py3
+    target: nvidia/pytorch:24.07-py3
     multiarch: true
