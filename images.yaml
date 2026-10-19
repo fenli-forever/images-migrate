@@ -16,8 +16,9 @@ target:
   namespace: jdaip-system
   platforms:
     - linux/amd64
+    - linux/arm64/v8
 
 images:
-  - source: donnmyth/mlperf-nvidia:llama31_8b-pyt-sm90
-    target: mlperf-nvidia:llama31_8b-pyt-sm90
-    multiarch: false
+  - source: golang:1.26
+    target: golang:1.26
+    multiarch: true
