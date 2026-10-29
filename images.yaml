@@ -19,6 +19,6 @@ target:
     - linux/arm64/v8
 
 images:
-  - source: golang:1.26
-    target: golang:1.26
+  - source: nginx:1.28-alpine
+    target: nginx:1.28-alpine
     multiarch: true
