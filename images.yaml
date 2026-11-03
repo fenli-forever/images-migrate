@@ -16,9 +16,8 @@ target:
   namespace: jdaip-system
   platforms:
     - linux/amd64
-    - linux/arm64/v8
 
 images:
-  - source: nginx:1.28-alpine
-    target: nginx:1.28-alpine
+  - source: vllm-openai:v0.33.0
+    target: vllm-openai:v0.33.0
     multiarch: true
