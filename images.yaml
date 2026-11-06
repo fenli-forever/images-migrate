@@ -18,6 +18,6 @@ target:
     - linux/amd64
 
 images:
-  - source: lmsysorg/sglang:v0.5.23
-    target: sglang:v0.5.23
+  - source: vllm/vllm-openai:v0.33.0
+    target: vllm-openai:v0.33.0
     multiarch: true
