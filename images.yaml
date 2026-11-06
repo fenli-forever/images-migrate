@@ -16,8 +16,9 @@ target:
   namespace: jdaip-system
   platforms:
     - linux/amd64
+    - linux/arm64/v8
 
 images:
-  - source: quay.io/ascend/vllm-ascend:v0.30.0-a3
-    target: vllm-ascend:v0.30.0-a3
+  - source: quay.io/ascend/vllm-ascend:v0.30.0
+    target: vllm-ascend:v0.30.0
     multiarch: true
